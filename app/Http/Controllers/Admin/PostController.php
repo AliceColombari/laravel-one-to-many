@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Post;
+use App\Category;
+use Illuminate\Support\Str;
+use Doctrine\Inflector\Rules\Word;
 
 class PostController extends Controller
 {
@@ -27,8 +30,9 @@ class PostController extends Controller
      */
     public function create()
     {
-        //
-        return view('admin.post.create');
+        // voglio ottenere tutte le categorie e poter tornare tutte le categorie del db
+        $categories = Category::all();
+        return view('admin.post.create', compact('categories'));
     }
 
     /**
@@ -40,6 +44,37 @@ class PostController extends Controller
     public function store(Request $request)
     {
         //
+        // funzione validazione dati
+        $request->validate(
+            [
+                'title'=>'required|min:5',
+                'content'=>'required|min:10',
+                'category_id' => 'nullable|exists:categories,id'
+            ]
+            );
+
+            // TITOLO: Lavoro futuro
+            // SLUG: lavoro-futuro
+
+            $data = $request->all();
+            $slug = Str::slug($data['title']);
+
+            
+            $counter = 1;
+
+            // cerca title post se già esiste un post con questo slug generane uno diverso
+            while(Post::where('slug', $slug)->first()) {
+                // lavoro-futuro-1
+                $slug = Str::slug($data['title']) . '-' . $counter;
+                $counter++;
+            };
+
+            $data['slug'] = $slug;
+
+            $post = new Post();
+            $post->fill($data);
+            $post->save();
+            return redirect()->route('admin.posts.index');
     }
 
     /**
@@ -48,9 +83,10 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Post $post)
     {
         //
+        return view('admin.post.show', compact('post'));
     }
 
     /**
@@ -59,9 +95,12 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(Post $post)
     {
         //
+        $categories = Category::all();
+
+        return view('admin.post.edit', compact('post', 'categories'));
     }
 
     /**
@@ -71,9 +110,38 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Post $post)
     {
-        //
+        // funzione validazione dati aggiornati
+        $request->validate(
+            [
+                'title'=>'required|min:5',
+                'content'=>'required|min:10',
+                'category_id' => 'nullable|exists:categories,id'
+            ]
+            );
+
+            $data = $request->all();
+            $slug = Str::slug($data['title']);
+
+            if ($post->slug != $slug) {
+
+                $counter = 1;
+
+                // cerca title post se già esiste un post con questo slug generane uno diverso
+                while(Post::where('slug', $slug)->first()) {
+                    $slug = Str::slug($data['title']) . '-' . $counter;
+                    $counter++;
+                }
+
+                $data['slug'] = $slug;
+
+            }
+            
+            $post->update($data);
+            $post->save();
+            
+            return redirect()->route('admin.posts.index');
     }
 
     /**
@@ -82,8 +150,11 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Post $post)
     {
-        //
+        // Eliminazione post
+        // cancellazione elemento su db
+        $post->delete();
+        return redirect()->route('admin.posts.index');
     }
 }
