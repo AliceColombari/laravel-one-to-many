@@ -51,7 +51,7 @@ class PostController extends Controller
                 'content'=>'required|min:10',
                 'category_id' => 'nullable|exists:categories,id'
             ]
-            );
+        );
 
             // TITOLO: Lavoro futuro
             // SLUG: lavoro-futuro
